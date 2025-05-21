@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>魚貨查詢 🐟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-image: linear-gradient(to bottom, #f5f5f5, #e8e6df);
+            font-family: 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
+        }
+        .emoji {
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+        }
+        .container {
+            background: linear-gradient(to bottom right, #f0ece3, #e3ded4);
+            border: 2px solid #d2c8b6;
+        }
+        input, select {
+            background-color: #f5f3ed;
+            border-color: #d2c8b6;
+            color: #4a4a3c;
+        }
+        input::placeholder {
+            color: #8a8a76;
+        }
+        button {
+            background-color: #a8a891;
+            color: #2f2f26;
+        }
+        button:hover {
+            background-color: #989880;
+        }
+        h1, h3 {
+            color: #3c3c2e;
+        }
+        p, label, #loading {
+            color: #4a4a3c;
+        }
+        .result-item {
+            background-color: #f9f8f3;
+            border-color: #d2c8b6;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-4xl container rounded-2xl shadow-lg p-8">
+        <h1 class="text-4xl font-bold text-center mb-6">魚價查詢 🐠✨</h1>
+        
+        <div id="loading" class="text-xl text-center">正在從政府資料開放平台下載資料...<br>
+            資料載入中... 🌾</div>
+        
+        <div id="search" class="hidden flex flex-col sm:flex-row justify-center mb-6 gap-4">
+            <input 
+                type="text" 
+                id="query" 
+                placeholder="輸入漁獲名稱 (例如：鯖魚) 🐟" 
+                class="w-full sm:max-w-md p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a8a891]"
+            />
+            <button 
+                id="searchButton" 
+                class="p-3 rounded-lg hover:shadow-md transition"
+            >
+                查詢 🔍
+            </button>
+        </div>
+        
+        <div id="filters" class="hidden mb-6 flex flex-col sm:flex-row justify-center gap-4">
+            <div class="text-center">
+                <label for="marketSelect" class="text-lg font-semibold">選擇地點 🌏: </label>
+                <select id="marketSelect" class="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a8a891]">
+                    <option value="all">所有區域</option>
+                </select>
+            </div>
+            <div class="text-center">
+                <label for="dateSelect" class="text-lg font-semibold">選擇日期 📅: </label>
+                <select id="dateSelect" class="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a8a891]">
+                    <option value="all">所有日期</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="results" class="grid gap-6"></div>
+    </div>
+
+    <script>
+        let data = [];
+        let filteredResults = [];
+
+        // 讀取 API
+        fetch('https://data.moa.gov.tw/Service/OpenData/FromM/AquaticTransData.aspx?IsTransData=1&UnitId=039')
+            .then(response => response.json())
+            .then(jsonData => {
+                data = jsonData;
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("search").style.display = "flex";
+            })
+            .catch(error => {
+                console.error('錯誤:', error);
+                document.getElementById("loading").innerText = "資料載入失敗，請稍後再試。 😔";
+                document.getElementById("loading").classList.add("text-[#4a4a3c]");
+            });
+
+        // 顯示結果
+        function displayResults(results, market = 'all', date = 'all') {
+            const resultsDiv = document.getElementById("results");
+            resultsDiv.innerHTML = '';
+
+            let filteredData = results;
+            if (market !== 'all') {
+                filteredData = filteredData.filter(item => item.市場名稱 === market);
+            }
+            if (date !== 'all') {
+                filteredData = filteredData.filter(item => item.交易日期 === date);
+            }
+
+            if (filteredData.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="text-center text-[#4a4a3c]">無資料符合查詢條件 😿</div>
+                `;
+                return;
+            }
+
+            // 按交易日期、魚貨名稱、市場名稱群組
+            const groupedData = filteredData.reduce((acc, item) => {
+                const key = `${item.交易日期}_${item.魚貨名稱}_${item.市場名稱}`;
+                if (!acc[key]) {
+                    acc[key] = {
+                        交易日期: item.交易日期,
+                        魚貨名稱: item.魚貨名稱,
+                        市場名稱: item.市場名稱,
+                        上價: [],
+                        中價: [],
+                        下價: [],
+                        交易量: [],
+                        平均價: []
+                    };
+                }
+                acc[key].上價.push(parseFloat(item.上價) || 0);
+                acc[key].中價.push(parseFloat(item.中價) || 0);
+                acc[key].下價.push(parseFloat(item.下價) || 0);
+                acc[key].交易量.push(parseFloat(item.交易量) || 0);
+                acc[key].平均價.push(parseFloat(item.平均價) || 0);
+                return acc;
+            }, {});
+
+            // 計算平均值並顯示
+            Object.values(groupedData).forEach(group => {
+                const avg = (arr) => arr.length ? (arr.reduce((sum, val) => sum + val, 0) / arr.length).toFixed(2) : 'N/A';
+                
+                const resultItem = document.createElement("div");
+                resultItem.className = "result-item p-6 rounded-lg shadow-md border";
+                resultItem.innerHTML = `
+                    <h3 class="text-xl font-semibold">${group.魚貨名稱} 🐡</h3>
+                    <p><strong>交易日期 📅:</strong> ${group.交易日期}</p>
+                    <p><strong>市場名稱 🏬:</strong> ${group.市場名稱}</p>
+                    <p><strong>平均上價 💰:</strong> ${avg(group.上價)}</p>
+                    <p><strong>平均中價 💸:</strong> ${avg(group.中價)}</p>
+                    <p><strong>平均下價 🤑:</strong> ${avg(group.下價)}</p>
+                    <p><strong>平均交易量 📦:</strong> ${avg(group.交易量)}</p>
+                    <p><strong>平均價 💲:</strong> ${avg(group.平均價)}</p>
+                `;
+                resultsDiv.appendChild(resultItem);
+            });
+        }
+
+        // 查詢功能
+        document.getElementById("searchButton").addEventListener("click", () => {
+            const query = document.getElementById("query").value.toLowerCase();
+            filteredResults = data.filter(item => 
+                item.魚貨名稱.toLowerCase().includes(query)
+            );
+
+            // 重置市場和日期選擇
+            const marketSelect = document.getElementById("marketSelect");
+            const dateSelect = document.getElementById("dateSelect");
+            marketSelect.innerHTML = '<option value="all">所有區域</option>';
+            dateSelect.innerHTML = '<option value="all">所有日期</option>';
+            document.getElementById("filters").style.display = filteredResults.length > 0 ? "flex" : "none";
+
+            // 填充市場下拉選單
+            const markets = [...new Set(filteredResults.map(item => item.市場名稱))];
+            markets.forEach(market => {
+                const option = document.createElement("option");
+                option.value = market;
+                option.textContent = market;
+                marketSelect.appendChild(option);
+            });
+
+            // 填充日期下拉選單
+            const dates = [...new Set(filteredResults.map(item => item.交易日期))].sort();
+            dates.forEach(date => {
+                const option = document.createElement("option");
+                option.value = date;
+                option.textContent = date;
+                dateSelect.appendChild(option);
+            });
+
+            // 顯示初始結果
+            displayResults(filteredResults);
+        });
+
+        // 市場篩選功能
+        document.getElementById("marketSelect").addEventListener("change", (e) => {
+            const selectedDate = document.getElementById("dateSelect").value;
+            displayResults(filteredResults, e.target.value, selectedDate);
+        });
+
+        // 日期篩選功能
+        document.getElementById("dateSelect").addEventListener("change", (e) => {
+            const selectedMarket = document.getElementById("marketSelect").value;
+            displayResults(filteredResults, selectedMarket, e.target.value);
+        });
+    </script>
+</body>
+</html>
