@@ -12,7 +12,7 @@ Welcome to **FishPriceFinderTW**, a super cute web app to dive into Taiwan's fis
 ## 🚀 Getting Started
 
 ### 🐳 Using FishPriceFinderTW
-1. Visit the [GitHub Pages site](https://[your-username].github.io/FishPriceFinderTW/)! 🌐
+1. Visit the [GitHub Pages site](https://jackyleedesign.github.io/FishPriceFinderTW/)! 🌐
 2. Type a fish name (e.g., 鯖魚) in the search bar and click **查詢 🔍**.
 3. Use the dropdowns to filter by market (所有區域 for all) or date (所有日期 for all).
 4. Browse the results with average prices and trading volumes! 💰📦
@@ -32,7 +32,7 @@ To share FishPriceFinderTW with the world, follow these steps to set it up on Gi
    - Go to your repository’s **Settings** tab.
    - Scroll to the **Pages** section.
    - Under **Source**, select the `main` branch and `/ (root)` folder, then click **Save**.
-   - Wait a few minutes, and your site will be live at `https://[your-username].github.io/FishPriceFinderTW/`.
+   - Wait a few minutes, and your site will be live at `https://jackyleedesign.github.io/FishPriceFinderTW/`.
 
 4. **Test It Out**:
    - Visit the URL to ensure the app loads and fetches data correctly.
@@ -40,7 +40,7 @@ To share FishPriceFinderTW with the world, follow these steps to set it up on Gi
 
 ### 🛠️ Development Setup
 If you want to tweak FishPriceFinderTW locally:
-1. Clone the repository: `git clone https://github.com/[your-username]/FishPriceFinderTW.git`
+1. Clone the repository: `git clone https://github.com/JackyLeeDesign/FishPriceFinderTW.git`
 2. Open `index.html` in a browser to test locally (note: the API fetch requires an internet connection).
 3. Edit the HTML, CSS, or JavaScript to customize the app! 🛠️
 
